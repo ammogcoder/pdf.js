@@ -17,6 +17,10 @@ limitations under the License.
 
 'use strict';
 
+chrome.extension.isAllowedFileSchemeAccess = (cb) => {
+  cb(true)
+}
+
 var VIEWER_URL = chrome.extension.getURL('content/web/viewer.html');
 
 function getViewerURL(pdf_url) {
