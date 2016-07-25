@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* globals DEFAULT_URL, PDFBug, Stats */
+/* globals DEFAULT_URL, PDFBug, Stats, chrome */
 
 'use strict';
 
@@ -637,6 +637,11 @@ var PDFViewerApplication = {
           loadingErrorMessage = mozL10n.get('missing_file_error', null,
                                             'Missing PDF file.');
         } else if (exception instanceof pdfjsLib.UnexpectedResponseException) {
+          if (exception.status === 0) {
+            // Try reloading
+            chrome.ipc.sendToHost('reload');
+            return;
+          }
           loadingErrorMessage = mozL10n.get('unexpected_response_error', null,
                                             'Unexpected server response.');
         }
