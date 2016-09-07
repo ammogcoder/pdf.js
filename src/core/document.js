@@ -76,6 +76,7 @@ var Page = (function PageClosure() {
     this.xref = xref;
     this.ref = ref;
     this.fontCache = fontCache;
+    this.uniquePrefix = 'p' + this.pageIndex + '_';
     this.idCounters = {
       obj: 0
     };
@@ -223,7 +224,7 @@ var Page = (function PageClosure() {
 
       var partialEvaluator = new PartialEvaluator(pdfManager, this.xref,
                                                   handler, this.pageIndex,
-                                                  'p' + this.pageIndex + '_',
+                                                  this.uniquePrefix,
                                                   this.idCounters,
                                                   this.fontCache,
                                                   this.evaluatorOptions);
@@ -265,7 +266,8 @@ var Page = (function PageClosure() {
     },
 
     extractTextContent: function Page_extractTextContent(task,
-                                                         normalizeWhitespace) {
+                                                         normalizeWhitespace,
+                                                         combineTextItems) {
       var handler = {
         on: function nullHandlerOn() {},
         send: function nullHandlerSend() {}
@@ -289,7 +291,7 @@ var Page = (function PageClosure() {
         var contentStream = data[0];
         var partialEvaluator = new PartialEvaluator(pdfManager, self.xref,
                                                     handler, self.pageIndex,
-                                                    'p' + self.pageIndex + '_',
+                                                    self.uniquePrefix,
                                                     self.idCounters,
                                                     self.fontCache,
                                                     self.evaluatorOptions);
@@ -298,7 +300,8 @@ var Page = (function PageClosure() {
                                                task,
                                                self.resources,
                                                /* stateManager = */ null,
-                                               normalizeWhitespace);
+                                               normalizeWhitespace,
+                                               combineTextItems);
       });
     },
 
@@ -323,7 +326,9 @@ var Page = (function PageClosure() {
       var annotationFactory = new AnnotationFactory();
       for (var i = 0, n = annotationRefs.length; i < n; ++i) {
         var annotationRef = annotationRefs[i];
-        var annotation = annotationFactory.create(this.xref, annotationRef);
+        var annotation = annotationFactory.create(this.xref, annotationRef,
+                                                  this.uniquePrefix,
+                                                  this.idCounters);
         if (annotation) {
           annotations.push(annotation);
         }

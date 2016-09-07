@@ -287,7 +287,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
 
         var groupSubtype = group.get('S');
         var colorSpace;
-        if (isName(groupSubtype) && groupSubtype.name === 'Transparency') {
+        if (isName(groupSubtype, 'Transparency')) {
           groupOptions.isolated = (group.get('I') || false);
           groupOptions.knockout = (group.get('K') || false);
           colorSpace = (group.has('CS') ?
@@ -582,7 +582,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
             gStateObj.push([key, value]);
             break;
           case 'SMask':
-            if (isName(value) && value.name === 'None') {
+            if (isName(value, 'None')) {
               gStateObj.push([key, false]);
               break;
             }
@@ -890,8 +890,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                 assert(isStream(xobj), 'XObject should be a stream');
 
                 var type = xobj.dict.get('Subtype');
-                assert(isName(type),
-                  'XObject should have a Name subtype');
+                assert(isName(type), 'XObject should have a Name subtype');
 
                 if (type.name === 'Form') {
                   stateManager.save();
@@ -1132,7 +1131,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
     getTextContent:
         function PartialEvaluator_getTextContent(stream, task, resources,
                                                  stateManager,
-                                                 normalizeWhitespace) {
+                                                 normalizeWhitespace,
+                                                 combineTextItems) {
 
       stateManager = (stateManager || new StateManager(new TextState()));
 
@@ -1422,9 +1422,17 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
 
           switch (fn | 0) {
             case OPS.setFont:
+              // Optimization to ignore multiple identical Tf commands.
+              var fontNameArg = args[0].name, fontSizeArg = args[1];
+              if (textState.font && fontNameArg === textState.fontName &&
+                  fontSizeArg === textState.fontSize) {
+                break;
+              }
+
               flushTextContentItem();
-              textState.fontSize = args[1];
-              next(handleSetFont(args[0].name, null));
+              textState.fontName = fontNameArg;
+              textState.fontSize = fontSizeArg;
+              next(handleSetFont(fontNameArg, null));
               return;
             case OPS.setTextRise:
               flushTextContentItem();
@@ -1443,7 +1451,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               var isSameTextLine = !textState.font ? false :
                 ((textState.font.vertical ? args[0] : args[1]) === 0);
               advance = args[0] - args[1];
-              if (isSameTextLine && textContentItem.initialized &&
+              if (combineTextItems &&
+                  isSameTextLine && textContentItem.initialized &&
                   advance > 0 &&
                   advance <= textContentItem.fakeMultiSpaceMax) {
                 textState.translateTextLineMatrix(args[0], args[1]);
@@ -1475,7 +1484,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               // Optimization to treat same line movement as advance.
               advance = textState.calcTextLineMatrixAdvance(
                 args[0], args[1], args[2], args[3], args[4], args[5]);
-              if (advance !== null && textContentItem.initialized &&
+              if (combineTextItems &&
+                  advance !== null && textContentItem.initialized &&
                   advance.value > 0 &&
                   advance.value <= textContentItem.fakeMultiSpaceMax) {
                 textState.translateTextLineMatrix(advance.width,
@@ -1599,8 +1609,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               assert(isStream(xobj), 'XObject should be a stream');
 
               var type = xobj.dict.get('Subtype');
-              assert(isName(type),
-                'XObject should have a Name subtype');
+              assert(isName(type), 'XObject should have a Name subtype');
 
               if ('Form' !== type.name) {
                 xobjsCache.key = name;
@@ -1616,7 +1625,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
 
               next(self.getTextContent(xobj, task,
                    xobj.dict.get('Resources') || resources, stateManager,
-                   normalizeWhitespace).then(function (formTextContent) {
+                   normalizeWhitespace, combineTextItems).then(
+                function (formTextContent) {
                   Util.appendToArray(textContent.items, formTextContent.items);
                   Util.extendObj(textContent.styles, formTextContent.styles);
                   stateManager.restore();
@@ -1639,6 +1649,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               }
               var gStateFont = gState.get('Font');
               if (gStateFont) {
+                textState.fontName = null;
                 textState.fontSize = gStateFont[1];
                 next(handleSetFont(null, gStateFont[0]));
                 return;
@@ -2558,6 +2569,7 @@ var StateManager = (function StateManagerClosure() {
 var TextState = (function TextStateClosure() {
   function TextState() {
     this.ctm = new Float32Array(IDENTITY_MATRIX);
+    this.fontName = null;
     this.fontSize = 0;
     this.font = null;
     this.fontMatrix = FONT_IDENTITY_MATRIX;

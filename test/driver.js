@@ -64,7 +64,8 @@ var rasterizeTextLayer = (function rasterizeTextLayerClosure() {
     return textLayerStylePromise;
   }
 
-  function rasterizeTextLayer(ctx, viewport, textContent) {
+  function rasterizeTextLayer(ctx, viewport, textContent,
+                              enhanceTextSelection) {
     return new Promise(function (resolve) {
       // Building SVG with size of the viewport.
       var svg = document.createElementNS(SVG_NS, 'svg:svg');
@@ -90,9 +91,11 @@ var rasterizeTextLayer = (function rasterizeTextLayerClosure() {
       var task = PDFJS.renderTextLayer({
         textContent: textContent,
         container: div,
-        viewport: viewport
+        viewport: viewport,
+        enhanceTextSelection: enhanceTextSelection,
       });
       Promise.all([stylePromise, task.promise]).then(function (results) {
+        task.expandTextDivs(true);
         style.textContent = results[0];
         svg.appendChild(foreignObject);
 
@@ -332,7 +335,7 @@ var Driver = (function DriverClosure() {
 
       this._log('Loading file "' + task.file + '"\n');
 
-      var absoluteUrl = new URL(task.file, window.location).href; 
+      var absoluteUrl = new URL(task.file, window.location).href;
       PDFJS.disableRange = task.disableRange;
       PDFJS.disableAutoFetch = !task.enableAutoFetch;
       try {
@@ -468,13 +471,14 @@ var Driver = (function DriverClosure() {
               var textLayerContext = textLayerCanvas.getContext('2d');
               textLayerContext.clearRect(0, 0,
                 textLayerCanvas.width, textLayerCanvas.height);
+              var enhanceText = !!task.enhance;
               // The text builder will draw its content on the test canvas
-              initPromise =
-                page.getTextContent({ normalizeWhitespace: true }).then(
-                  function(textContent) {
-                    return rasterizeTextLayer(textLayerContext, viewport,
-                                              textContent);
-                });
+              initPromise = page.getTextContent({
+                normalizeWhitespace: true,
+              }).then(function(textContent) {
+                return rasterizeTextLayer(textLayerContext, viewport,
+                                          textContent, enhanceText);
+              });
             } else {
               textLayerCanvas = null;
 

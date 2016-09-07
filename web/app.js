@@ -101,6 +101,7 @@ var SCALE_SELECT_CONTAINER_PADDING = 8;
 var SCALE_SELECT_PADDING = 22;
 var PAGE_NUMBER_LOADING_INDICATOR = 'visiblePageIsLoading';
 var DISABLE_AUTO_FETCH_LOADING_BAR_TIMEOUT = 5000;
+var ENHANCE_TEXT_SELECTION = false;
 
 function configure(PDFJS) {
   PDFJS.imageResourcesPath = './images/';
@@ -209,7 +210,8 @@ var PDFViewerApplication = {
       eventBus: eventBus,
       renderingQueue: pdfRenderingQueue,
       linkService: pdfLinkService,
-      downloadManager: downloadManager
+      downloadManager: downloadManager,
+      enhanceTextSelection: ENHANCE_TEXT_SELECTION,
     });
     pdfRenderingQueue.setViewer(this.pdfViewer);
     pdfLinkService.setViewer(this.pdfViewer);
@@ -396,15 +398,15 @@ var PDFViewerApplication = {
   },
 
   get pagesCount() {
-    return this.pdfDocument.numPages;
+    return this.pdfDocument ? this.pdfDocument.numPages : 0;
   },
 
   set page(val) {
-    this.pdfLinkService.page = val;
+    this.pdfViewer.currentPageNumber = val;
   },
 
-  get page() { // TODO remove
-    return this.pdfLinkService.page;
+  get page() {
+    return this.pdfViewer.currentPageNumber;
   },
 
   get supportsPrinting() {
@@ -1192,7 +1194,7 @@ var PDFViewerApplication = {
 
     this.forceRendering();
 
-    this.pdfViewer.scrollPageIntoView(pageNumber);
+    this.pdfViewer.currentPageNumber = pageNumber;
   },
 
   requestPresentationMode: function pdfViewRequestPresentationMode() {
@@ -1216,7 +1218,7 @@ var PDFViewerApplication = {
    * @typedef UpdateUIToolbarParameters
    * @property {number} pageNumber
    * @property {string} scaleValue
-   * @property {scale} scale
+   * @property {number} scale
    * @property {boolean} resetNumPages
    */
 
@@ -1267,8 +1269,8 @@ var PDFViewerApplication = {
     toolbarConfig.firstPage.disabled = (pageNumber <= 1);
     toolbarConfig.lastPage.disabled = (pageNumber >= pagesCount);
 
-    toolbarConfig.zoomOut.disabled = (scale === MIN_SCALE);
-    toolbarConfig.zoomIn.disabled = (scale === MAX_SCALE);
+    toolbarConfig.zoomOut.disabled = (scale <= MIN_SCALE);
+    toolbarConfig.zoomIn.disabled = (scale >= MAX_SCALE);
 
     selectScaleOption(scaleValue, scale);
   },
@@ -1501,41 +1503,37 @@ function webViewerInitialized() {
       }
     }, true);
 
-  appConfig.sidebar.toggleButton.addEventListener('click',
-    function() {
-      PDFViewerApplication.pdfSidebar.toggle();
-    });
+  appConfig.sidebar.toggleButton.addEventListener('click', function() {
+    PDFViewerApplication.pdfSidebar.toggle();
+  });
 
-  appConfig.toolbar.previous.addEventListener('click',
-    function() {
-      PDFViewerApplication.page--;
-    });
+  appConfig.toolbar.previous.addEventListener('click', function() {
+    PDFViewerApplication.page--;
+  });
 
-  appConfig.toolbar.next.addEventListener('click',
-    function() {
-      PDFViewerApplication.page++;
-    });
+  appConfig.toolbar.next.addEventListener('click', function() {
+    PDFViewerApplication.page++;
+  });
 
-  appConfig.toolbar.zoomIn.addEventListener('click',
-    function() {
-      PDFViewerApplication.zoomIn();
-    });
+  appConfig.toolbar.zoomIn.addEventListener('click', function() {
+    PDFViewerApplication.zoomIn();
+  });
 
-  appConfig.toolbar.zoomOut.addEventListener('click',
-    function() {
-      PDFViewerApplication.zoomOut();
-    });
+  appConfig.toolbar.zoomOut.addEventListener('click', function() {
+    PDFViewerApplication.zoomOut();
+  });
 
   appConfig.toolbar.pageNumber.addEventListener('click', function() {
     this.select();
   });
 
   appConfig.toolbar.pageNumber.addEventListener('change', function() {
-    // Handle the user inputting a floating point number.
     PDFViewerApplication.page = (this.value | 0);
 
-    if (this.value !== (this.value | 0).toString()) {
-      this.value = PDFViewerApplication.page;
+    // Ensure that the page number input displays the correct value, even if the
+    // value entered by the user was invalid (e.g. a floating point number).
+    if (this.value !== PDFViewerApplication.page.toString()) {
+      PDFViewerApplication._updateUIToolbar({});
     }
   });
 
@@ -1716,7 +1714,7 @@ function webViewerNamedAction(e) {
   var action = e.action;
   switch (action) {
     case 'GoToPage':
-      PDFViewerApplication.appConfig.toolbar.pageNumber.focus();
+      PDFViewerApplication.appConfig.toolbar.pageNumber.select();
       break;
 
     case 'Find':
@@ -1976,8 +1974,8 @@ function webViewerPageChanging(e) {
   PDFViewerApplication._updateUIToolbar({
     pageNumber: page,
   });
-  if (e.previousPageNumber !== page &&
-      PDFViewerApplication.pdfSidebar.isThumbnailViewVisible) {
+
+  if (PDFViewerApplication.pdfSidebar.isThumbnailViewVisible) {
     PDFViewerApplication.pdfThumbnailViewer.scrollThumbnailIntoView(page);
   }
 
@@ -2191,7 +2189,9 @@ window.addEventListener('keydown', function keydown(evt) {
         /* falls through */
       case 75: // 'k'
       case 80: // 'p'
-        PDFViewerApplication.page--;
+        if (PDFViewerApplication.page > 1) {
+          PDFViewerApplication.page--;
+        }
         handled = true;
         break;
       case 27: // esc key
@@ -2221,7 +2221,9 @@ window.addEventListener('keydown', function keydown(evt) {
         /* falls through */
       case 74: // 'j'
       case 78: // 'n'
-        PDFViewerApplication.page++;
+        if (PDFViewerApplication.page < PDFViewerApplication.pagesCount) {
+          PDFViewerApplication.page++;
+        }
         handled = true;
         break;
 
@@ -2233,8 +2235,8 @@ window.addEventListener('keydown', function keydown(evt) {
         }
         break;
       case 35: // end
-        if (isViewerInPresentationMode || (PDFViewerApplication.pdfDocument &&
-            PDFViewerApplication.page < PDFViewerApplication.pagesCount)) {
+        if (isViewerInPresentationMode ||
+            PDFViewerApplication.page < PDFViewerApplication.pagesCount) {
           PDFViewerApplication.page = PDFViewerApplication.pagesCount;
           handled = true;
           ensureViewerFocused = true;
@@ -2259,7 +2261,9 @@ window.addEventListener('keydown', function keydown(evt) {
             pdfViewer.currentScaleValue !== 'page-fit') {
           break;
         }
-        PDFViewerApplication.page--;
+        if (PDFViewerApplication.page > 1) {
+          PDFViewerApplication.page--;
+        }
         handled = true;
         break;
 
