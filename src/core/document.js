@@ -42,6 +42,7 @@ var error = sharedUtil.error;
 var info = sharedUtil.info;
 var isArray = sharedUtil.isArray;
 var isArrayBuffer = sharedUtil.isArrayBuffer;
+var isNum = sharedUtil.isNum;
 var isString = sharedUtil.isString;
 var shadow = sharedUtil.shadow;
 var stringToBytes = sharedUtil.stringToBytes;
@@ -67,6 +68,7 @@ var AnnotationFactory = coreAnnotation.AnnotationFactory;
 
 var Page = (function PageClosure() {
 
+  var DEFAULT_USER_UNIT = 1.0;
   var LETTER_SIZE_MEDIABOX = [0, 0, 612, 792];
 
   function Page(pdfManager, xref, pageIndex, pageDict, ref, fontCache) {
@@ -138,6 +140,14 @@ var Page = (function PageClosure() {
       return shadow(this, 'mediaBox', obj);
     },
 
+    get userUnit() {
+      var obj = this.getPageProp('UserUnit');
+      if (!isNum(obj) || obj <= 0) {
+        obj = DEFAULT_USER_UNIT;
+      }
+      return shadow(this, 'userUnit', obj);
+    },
+
     get view() {
       var mediaBox = this.mediaBox;
       var cropBox = this.getInheritedPageProp('CropBox');
@@ -205,7 +215,8 @@ var Page = (function PageClosure() {
       }.bind(this));
     },
 
-    getOperatorList: function Page_getOperatorList(handler, task, intent) {
+    getOperatorList: function Page_getOperatorList(handler, task, intent,
+                                                   renderInteractiveForms) {
       var self = this;
 
       var pdfManager = this.pdfManager;
@@ -257,7 +268,8 @@ var Page = (function PageClosure() {
         }
 
         var annotationsReadyPromise = Annotation.appendToOperatorList(
-          annotations, pageOpList, partialEvaluator, task, intent);
+          annotations, pageOpList, partialEvaluator, task, intent,
+          renderInteractiveForms);
         return annotationsReadyPromise.then(function () {
           pageOpList.flush(true);
           return pageOpList;
@@ -327,6 +339,7 @@ var Page = (function PageClosure() {
       for (var i = 0, n = annotationRefs.length; i < n; ++i) {
         var annotationRef = annotationRefs[i];
         var annotation = annotationFactory.create(this.xref, annotationRef,
+                                                  this.pdfManager,
                                                   this.uniquePrefix,
                                                   this.idCounters);
         if (annotation) {
