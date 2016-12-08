@@ -9,7 +9,6 @@
     "16": "icon16.png"
   },
   "permissions": [
-    "fileBrowserHandler",
     "webRequest", "webRequestBlocking",
     "<all_urls>",
     "tabs",

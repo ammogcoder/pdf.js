@@ -691,7 +691,7 @@ var PDFViewerApplication = {
           loadingErrorMessage = mozL10n.get('missing_file_error', null,
                                             'Missing PDF file.');
         } else if (exception instanceof pdfjsLib.UnexpectedResponseException) {
-          if (exception.status === 0) {
+          if (exception.status === 0 && chrome.ipc && chrome.ipc.sendToHost) {
             // Try reloading
             chrome.ipc.sendToHost('reload');
             return;
