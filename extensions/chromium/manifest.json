@@ -58,6 +58,8 @@
     "ftp:/*",
     "file:/*",
     "chrome-extension:/*",
+    "blob:*",
+    "data:*",
     "filesystem:/*",
     "drive:*"
   ]

@@ -122,7 +122,7 @@
       }
       if (event.originalTarget) {
         try {
-          /* jshint expr:true */
+          // eslint-disable-next-line no-unused-expressions
           event.originalTarget.tagName;
         } catch (e) {
           // Mozilla-specific: element is a scrollbar (XUL element)
@@ -184,9 +184,8 @@
       this.element.removeEventListener('scroll', this._endPan, true);
       this.document.removeEventListener('mousemove', this._onmousemove, true);
       this.document.removeEventListener('mouseup', this._endPan, true);
-      if (this.overlay.parentNode) {
-        this.overlay.parentNode.removeChild(this.overlay);
-      }
+      // Note: ChildNode.remove doesn't throw if the parentNode is undefined.
+      this.overlay.remove();
     }
   };
 

@@ -76,9 +76,9 @@ var FirefoxCom = (function FirefoxComClosure() {
 
           document.documentElement.removeChild(node);
 
-          document.removeEventListener('pdf.js.response', listener, false);
+          document.removeEventListener('pdf.js.response', listener);
           return callback(response);
-        }, false);
+        });
       }
       document.documentElement.appendChild(request);
 
@@ -173,7 +173,7 @@ Preferences._readFromStorage = function (prefObj) {
       highlightAll: !!evt.detail.highlightAll,
       findPrevious: !!evt.detail.findPrevious
     });
-  }.bind(this);
+  };
 
   for (var i = 0, len = events.length; i < len; i++) {
     window.addEventListener(events[i], handleEvent);
@@ -280,7 +280,7 @@ PDFViewerApplication.externalServices = {
   },
 };
 
-//// l10n.js for Firefox extension expects services to be set.
+// l10n.js for Firefox extension expects services to be set.
 document.mozL10n.setExternalLocalizerServices({
   getLocale: function () {
     return FirefoxCom.requestSync('getLocale', null);

@@ -29,6 +29,7 @@
 
 var AnnotationBorderStyleType = sharedUtil.AnnotationBorderStyleType;
 var AnnotationType = sharedUtil.AnnotationType;
+var stringToPDFString = sharedUtil.stringToPDFString;
 var Util = sharedUtil.Util;
 var addLinkAttributes = displayDOMUtils.addLinkAttributes;
 var LinkTarget = displayDOMUtils.LinkTarget;
@@ -76,6 +77,14 @@ AnnotationElementFactory.prototype =
         switch (fieldType) {
           case 'Tx':
             return new TextWidgetAnnotationElement(parameters);
+          case 'Btn':
+            if (parameters.data.radioButton) {
+              return new RadioButtonWidgetAnnotationElement(parameters);
+            } else if (parameters.data.checkBox) {
+              return new CheckboxWidgetAnnotationElement(parameters);
+            }
+            warn('Unimplemented button widget annotation: pushbutton');
+            break;
           case 'Ch':
             return new ChoiceWidgetAnnotationElement(parameters);
         }
@@ -532,6 +541,83 @@ var TextWidgetAnnotationElement = (
 
 /**
  * @class
+ * @alias CheckboxWidgetAnnotationElement
+ */
+var CheckboxWidgetAnnotationElement =
+    (function CheckboxWidgetAnnotationElementClosure() {
+  function CheckboxWidgetAnnotationElement(parameters) {
+    WidgetAnnotationElement.call(this, parameters,
+                                 parameters.renderInteractiveForms);
+  }
+
+  Util.inherit(CheckboxWidgetAnnotationElement, WidgetAnnotationElement, {
+    /**
+     * Render the checkbox widget annotation's HTML element
+     * in the empty container.
+     *
+     * @public
+     * @memberof CheckboxWidgetAnnotationElement
+     * @returns {HTMLSectionElement}
+     */
+    render: function CheckboxWidgetAnnotationElement_render() {
+      this.container.className = 'buttonWidgetAnnotation checkBox';
+
+      var element = document.createElement('input');
+      element.disabled = this.data.readOnly;
+      element.type = 'checkbox';
+      if (this.data.fieldValue && this.data.fieldValue !== 'Off') {
+        element.setAttribute('checked', true);
+      }
+
+      this.container.appendChild(element);
+      return this.container;
+    }
+  });
+
+  return CheckboxWidgetAnnotationElement;
+})();
+
+/**
+ * @class
+ * @alias RadioButtonWidgetAnnotationElement
+ */
+var RadioButtonWidgetAnnotationElement =
+    (function RadioButtonWidgetAnnotationElementClosure() {
+  function RadioButtonWidgetAnnotationElement(parameters) {
+    WidgetAnnotationElement.call(this, parameters,
+                                 parameters.renderInteractiveForms);
+  }
+
+  Util.inherit(RadioButtonWidgetAnnotationElement, WidgetAnnotationElement, {
+    /**
+     * Render the radio button widget annotation's HTML element
+     * in the empty container.
+     *
+     * @public
+     * @memberof RadioButtonWidgetAnnotationElement
+     * @returns {HTMLSectionElement}
+     */
+    render: function RadioButtonWidgetAnnotationElement_render() {
+      this.container.className = 'buttonWidgetAnnotation radioButton';
+
+      var element = document.createElement('input');
+      element.disabled = this.data.readOnly;
+      element.type = 'radio';
+      element.name = this.data.fieldName;
+      if (this.data.fieldValue === this.data.buttonValue) {
+        element.setAttribute('checked', true);
+      }
+
+      this.container.appendChild(element);
+      return this.container;
+    }
+  });
+
+  return RadioButtonWidgetAnnotationElement;
+})();
+
+ /**
+ * @class
  * @alias ChoiceWidgetAnnotationElement
  */
 var ChoiceWidgetAnnotationElement = (
@@ -922,8 +1008,15 @@ var FileAttachmentAnnotationElement = (
   function FileAttachmentAnnotationElement(parameters) {
     AnnotationElement.call(this, parameters, true);
 
-    this.filename = getFilenameFromUrl(parameters.data.file.filename);
-    this.content = parameters.data.file.content;
+    var file = this.data.file;
+    this.filename = getFilenameFromUrl(file.filename);
+    this.content = file.content;
+
+    this.linkService.onFileAttachmentAnnotation({
+      id: stringToPDFString(file.filename),
+      filename: file.filename,
+      content: file.content,
+    });
   }
 
   Util.inherit(FileAttachmentAnnotationElement, AnnotationElement, {
@@ -1001,8 +1094,7 @@ var AnnotationLayer = (function AnnotationLayerClosure() {
         if (!data) {
           continue;
         }
-
-        var properties = {
+        var element = annotationElementFactory.create({
           data: data,
           layer: parameters.div,
           page: parameters.page,
@@ -1012,8 +1104,7 @@ var AnnotationLayer = (function AnnotationLayerClosure() {
           imageResourcesPath: parameters.imageResourcesPath ||
                               getDefaultSetting('imageResourcesPath'),
           renderInteractiveForms: parameters.renderInteractiveForms || false,
-        };
-        var element = annotationElementFactory.create(properties);
+        });
         if (element.isRenderable) {
           parameters.div.appendChild(element.render());
         }

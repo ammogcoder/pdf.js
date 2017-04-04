@@ -38,10 +38,12 @@ var isInt = sharedUtil.isInt;
 var isNum = sharedUtil.isNum;
 var isString = sharedUtil.isString;
 var warn = sharedUtil.warn;
+var EOF = corePrimitives.EOF;
 var Cmd = corePrimitives.Cmd;
 var Dict = corePrimitives.Dict;
 var Name = corePrimitives.Name;
 var Ref = corePrimitives.Ref;
+var isEOF = corePrimitives.isEOF;
 var isCmd = corePrimitives.isCmd;
 var isDict = corePrimitives.isDict;
 var isName = corePrimitives.isName;
@@ -56,12 +58,6 @@ var LZWStream = coreStream.LZWStream;
 var NullStream = coreStream.NullStream;
 var PredictorStream = coreStream.PredictorStream;
 var RunLengthStream = coreStream.RunLengthStream;
-
-var EOF = {};
-
-function isEOF(v) {
-  return (v === EOF);
-}
 
 var MAX_LENGTH_TO_CACHE = 1000;
 
@@ -248,29 +244,29 @@ var Parser = (function ParserClosure() {
           case 0xC1: // SOF1
           case 0xC2: // SOF2
           case 0xC3: // SOF3
-
+            /* falls through */
           case 0xC5: // SOF5
           case 0xC6: // SOF6
           case 0xC7: // SOF7
-
+            /* falls through */
           case 0xC9: // SOF9
           case 0xCA: // SOF10
           case 0xCB: // SOF11
-
+            /* falls through */
           case 0xCD: // SOF13
           case 0xCE: // SOF14
           case 0xCF: // SOF15
-
+            /* falls through */
           case 0xC4: // DHT
           case 0xCC: // DAC
-
+            /* falls through */
           case 0xDA: // SOS
           case 0xDB: // DQT
           case 0xDC: // DNL
           case 0xDD: // DRI
           case 0xDE: // DHP
           case 0xDF: // EXP
-
+            /* falls through */
           case 0xE0: // APP0
           case 0xE1: // APP1
           case 0xE2: // APP2
@@ -287,7 +283,7 @@ var Parser = (function ParserClosure() {
           case 0xED: // APP13
           case 0xEE: // APP14
           case 0xEF: // APP15
-
+            /* falls through */
           case 0xFE: // COM
             // The marker should be followed by the length of the segment.
             markerLength = stream.getUint16();
@@ -895,7 +891,7 @@ var Lexer = (function LexerClosure() {
             var x2 = toHexDigit(ch);
             if (x2 === -1) {
               warn('Lexer_getName: Illegal digit (' +
-                   String.fromCharCode(ch) +') in hexadecimal number.');
+                   String.fromCharCode(ch) + ') in hexadecimal number.');
               strBuf.push('#', String.fromCharCode(previousCh));
               if (specialChars[ch]) {
                 break;
@@ -1017,6 +1013,11 @@ var Lexer = (function LexerClosure() {
           this.nextChar();
           return Cmd.get('}');
         case 0x29: // ')'
+          // Consume the current character in order to avoid permanently hanging
+          // the worker thread if `Lexer.getObject` is called from within a loop
+          // containing try-catch statements, since we would otherwise attempt
+          // to parse the *same* character over and over (fixes issue8061.pdf).
+          this.nextChar();
           error('Illegal character: ' + ch);
           break;
       }
@@ -1119,9 +1120,7 @@ var Linearization = {
   }
 };
 
-exports.EOF = EOF;
 exports.Lexer = Lexer;
 exports.Linearization = Linearization;
 exports.Parser = Parser;
-exports.isEOF = isEOF;
 }));
