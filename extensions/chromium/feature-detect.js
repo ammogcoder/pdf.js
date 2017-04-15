@@ -23,4 +23,6 @@ var Features = {
   extensionSupportsFTP: false,
   // Whether redirectUrl at onHeadersReceived is supported.
   webRequestRedirectUrl: true,
+  // chrome.ipc support
+  ipc: chrome.ipcRenderer
 };
