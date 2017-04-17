@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/* globals chrome, Features, saveReferer */
+/* globals chrome */
 
 'use strict';
 
@@ -132,145 +132,18 @@ chrome.webRequest.onHeadersReceived.addListener(
     var viewerUrl = getViewerURL(details.url);
 
     // Implemented in preserve-referer.js
-    saveReferer(details);
+    // saveReferer(details);
 
     // Replace frame with viewer
-    if (Features.webRequestRedirectUrl) {
-      return { redirectUrl: viewerUrl };
-    }
-    // Aww.. redirectUrl is not yet supported, so we have to use a different
-    // method as fallback (Chromium <35).
-
-    if (details.frameId === 0) {
-      // Main frame. Just replace the tab and be done!
-      chrome.tabs.update(details.tabId, {
-        url: viewerUrl
-      });
+    if (chrome.ipcRenderer) {
+      chrome.ipcRenderer.send('load-url-requested', details.tabId, viewerUrl);
       return { cancel: true };
     }
-    console.warn('Child frames are not supported in ancient Chrome builds!');
   },
   {
     urls: [
       '<all_urls>'
     ],
-    types: ['main_frame', 'sub_frame']
+    types: ['main_frame']
   },
   ['blocking', 'responseHeaders']);
-
-chrome.webRequest.onBeforeRequest.addListener(
-  function onBeforeRequestForFTP(details) {
-    if (!Features.extensionSupportsFTP) {
-      chrome.webRequest.onBeforeRequest.removeListener(onBeforeRequestForFTP);
-      return;
-    }
-    if (isPdfDownloadable(details)) {
-      return;
-    }
-    var viewerUrl = getViewerURL(details.url);
-    return { redirectUrl: viewerUrl };
-  },
-  {
-    urls: [
-      'ftp://*/*.pdf',
-      'ftp://*/*.PDF'
-    ],
-    types: ['main_frame', 'sub_frame']
-  },
-  ['blocking']);
-
-chrome.webRequest.onBeforeRequest.addListener(
-  function(details) {
-    if (isPdfDownloadable(details)) {
-      return;
-    }
-
-    // NOTE: The manifest file has declared an empty content script
-    // at file://*/* to make sure that the viewer can load the PDF file
-    // through XMLHttpRequest. Necessary to deal with http://crbug.com/302548
-    var viewerUrl = getViewerURL(details.url);
-
-    return { redirectUrl: viewerUrl };
-  },
-  {
-    urls: [
-      'file://*/*.pdf',
-      'file://*/*.PDF'
-    ],
-    types: ['main_frame', 'sub_frame']
-  },
-  ['blocking']);
-
-chrome.extension.isAllowedFileSchemeAccess(function(isAllowedAccess) {
-  if (isAllowedAccess) {
-    return;
-  }
-  // If the user has not granted access to file:-URLs, then the webRequest API
-  // will not catch the request. It is still visible through the webNavigation
-  // API though, and we can replace the tab with the viewer.
-  // The viewer will detect that it has no access to file:-URLs, and prompt the
-  // user to activate file permissions.
-  chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
-    if (details.frameId === 0 && !isPdfDownloadable(details)) {
-      chrome.tabs.update(details.tabId, {
-        url: getViewerURL(details.url)
-      });
-    }
-  }, {
-    url: [{
-      urlPrefix: 'file://',
-      pathSuffix: '.pdf'
-    }, {
-      urlPrefix: 'file://',
-      pathSuffix: '.PDF'
-    }]
-  });
-});
-
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-  if (message && message.action === 'getParentOrigin') {
-    // getParentOrigin is used to determine whether it is safe to embed a
-    // sensitive (local) file in a frame.
-    if (!sender.tab) {
-      sendResponse('');
-      return;
-    }
-    // TODO: This should be the URL of the parent frame, not the tab. But
-    // chrome-extension:-URLs are not visible in the webNavigation API
-    // (https://crbug.com/326768), so the next best thing is using the tab's URL
-    // for making security decisions.
-    var parentUrl = sender.tab.url;
-    if (!parentUrl) {
-      sendResponse('');
-      return;
-    }
-    if (parentUrl.lastIndexOf('file:', 0) === 0) {
-      sendResponse('file://');
-      return;
-    }
-    // The regexp should always match for valid URLs, but in case it doesn't,
-    // just give the full URL (e.g. data URLs).
-    var origin = /^[^:]+:\/\/[^/]+/.exec(parentUrl);
-    sendResponse(origin ? origin[1] : parentUrl);
-    return true;
-  }
-  if (message && message.action === 'isAllowedFileSchemeAccess') {
-    chrome.extension.isAllowedFileSchemeAccess(sendResponse);
-    return true;
-  }
-  if (message && message.action === 'openExtensionsPageForFileAccess') {
-    var url = 'chrome://extensions/?id=' + chrome.runtime.id;
-    if (message.data.newTab) {
-      chrome.tabs.create({
-        windowId: sender.tab.windowId,
-        index: sender.tab.index + 1,
-        url: url,
-        openerTabId: sender.tab.id
-      });
-    } else {
-      chrome.tabs.update(sender.tab.id, {
-        url: url
-      });
-    }
-  }
-});

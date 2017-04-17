@@ -897,7 +897,6 @@ gulp.task('chromium-pre', ['buildnumber', 'locale'], function () {
         .pipe(gulp.dest(CHROME_BUILD_DIR)),
     gulp.src([
       'extensions/chromium/**/*.{html,js,css,png}',
-      'extensions/chromium/preferences_schema.json'
     ], {base: 'extensions/chromium/'})
         .pipe(gulp.dest(CHROME_BUILD_DIR)),
   ]);
