@@ -15,16 +15,16 @@ limitations under the License.
 */
 /* globals chrome */
 
-'use strict';
+'use strict'
 
 chrome.extension.isAllowedFileSchemeAccess = (cb) => {
   cb(true)
 }
 
-var VIEWER_URL = chrome.extension.getURL('content/web/viewer.html');
+var VIEWER_URL = chrome.extension.getURL('content/web/viewer.html')
 
-function getViewerURL(pdf_url) {
-  return VIEWER_URL + '?file=' + encodeURIComponent(pdf_url);
+function getViewerURL (pdfUrl) {
+  return VIEWER_URL + '?file=' + encodeURIComponent(pdfUrl)
 }
 
 /**
@@ -32,9 +32,9 @@ function getViewerURL(pdf_url) {
  *                         event. The property "url" is read.
  * @return {boolean} True if the PDF file should be downloaded.
  */
-function isPdfDownloadable(details) {
+function isPdfDownloadable (details) {
   if (details.url.indexOf('pdfjs.action=download') >= 0) {
-    return true;
+    return true
   }
   // Display the PDF viewer regardless of the Content-Disposition header if the
   // file is displayed in the main frame, since most often users want to view
@@ -45,11 +45,11 @@ function isPdfDownloadable(details) {
   // operate correctly (#6106).
   if (details.type === 'main_frame' &&
       details.url.indexOf('=download') === -1) {
-    return false;
+    return false
   }
   var cdHeader = (details.responseHeaders &&
-    getHeaderFromHeaders(details.responseHeaders, 'content-disposition'));
-  return (cdHeader && /^attachment/i.test(cdHeader.value));
+    getHeaderFromHeaders(details.responseHeaders, 'content-disposition'))
+  return (cdHeader && /^attachment/i.test(cdHeader.value))
 }
 
 /**
@@ -57,11 +57,11 @@ function isPdfDownloadable(details) {
  * @param {Array} headers responseHeaders of webRequest.onHeadersReceived
  * @return {undefined|{name: string, value: string}} The header, if found.
  */
-function getHeaderFromHeaders(headers, headerName) {
+function getHeaderFromHeaders (headers, headerName) {
   for (var i = 0; i < headers.length; ++i) {
-    var header = headers[i];
+    var header = headers[i]
     if (header.name.toLowerCase() === headerName) {
-      return header;
+      return header
     }
   }
 }
@@ -73,21 +73,21 @@ function getHeaderFromHeaders(headers, headerName) {
  *                         are read.
  * @return {boolean} True if the resource is a PDF file.
  */
-function isPdfFile(details) {
-  var header = getHeaderFromHeaders(details.responseHeaders, 'content-type');
+function isPdfFile (details) {
+  var header = getHeaderFromHeaders(details.responseHeaders, 'content-type')
   if (header) {
-    var headerValue = header.value.toLowerCase().split(';', 1)[0].trim();
+    var headerValue = header.value.toLowerCase().split(';', 1)[0].trim()
     if (headerValue === 'application/pdf') {
-      return true;
+      return true
     }
     if (headerValue === 'application/octet-stream') {
       if (details.url.toLowerCase().indexOf('.pdf') > 0) {
-        return true;
+        return true
       }
       var cdHeader =
-        getHeaderFromHeaders(details.responseHeaders, 'content-disposition');
+        getHeaderFromHeaders(details.responseHeaders, 'content-disposition')
       if (cdHeader && /\.pdf(["']|$)/i.test(cdHeader.value)) {
-        return true;
+        return true
       }
     }
   }
@@ -102,42 +102,39 @@ function isPdfFile(details) {
  *                            Object with key "responseHeaders" if the headers
  *                            have been modified, undefined otherwise.
  */
-function getHeadersWithContentDispositionAttachment(details) {
-  var headers = details.responseHeaders;
-  var cdHeader = getHeaderFromHeaders(headers, 'content-disposition');
+function getHeadersWithContentDispositionAttachment (details) {
+  var headers = details.responseHeaders
+  var cdHeader = getHeaderFromHeaders(headers, 'content-disposition')
   if (!cdHeader) {
-    cdHeader = {name: 'Content-Disposition'};
-    headers.push(cdHeader);
+    cdHeader = {name: 'Content-Disposition'}
+    headers.push(cdHeader)
   }
   if (!/^attachment/i.test(cdHeader.value)) {
-    cdHeader.value = 'attachment' + cdHeader.value.replace(/^[^;]+/i, '');
-    return { responseHeaders: headers };
+    cdHeader.value = 'attachment' + cdHeader.value.replace(/^[^;]+/i, '')
+    return { responseHeaders: headers }
   }
 }
 
 chrome.webRequest.onHeadersReceived.addListener(
-  function(details) {
+  function (details) {
     if (details.method !== 'GET') {
       // Don't intercept POST requests until http://crbug.com/104058 is fixed.
-      return;
+      return
     }
     if (!isPdfFile(details)) {
-      return;
+      return
     }
     if (isPdfDownloadable(details)) {
       // Force download by ensuring that Content-Disposition: attachment is set
-      return getHeadersWithContentDispositionAttachment(details);
+      return getHeadersWithContentDispositionAttachment(details)
     }
 
-    var viewerUrl = getViewerURL(details.url);
-
-    // Implemented in preserve-referer.js
-    // saveReferer(details);
+    var viewerUrl = getViewerURL(details.url)
 
     // Replace frame with viewer
     if (chrome.ipcRenderer) {
-      chrome.ipcRenderer.send('load-url-requested', details.tabId, viewerUrl);
-      return { cancel: true };
+      chrome.ipcRenderer.send('load-url-requested', details.tabId, viewerUrl)
+      return { cancel: true }
     }
   },
   {
@@ -146,4 +143,4 @@ chrome.webRequest.onHeadersReceived.addListener(
     ],
     types: ['main_frame']
   },
-  ['blocking', 'responseHeaders']);
+  ['blocking', 'responseHeaders'])
