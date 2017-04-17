@@ -1,4 +1,4 @@
-/* Copyright 2012 Mozilla Foundation
+/* Copyright 2013 Mozilla Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,18 +12,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* eslint-disable no-unused-vars */
 
-'use strict';
+"use strict";
 
-var pdfjsVersion = PDFJSDev.eval('BUNDLE_VERSION');
-var pdfjsBuild = PDFJSDev.eval('BUNDLE_BUILD');
+this.EXPORTED_SYMBOLS = ["PdfJsTelemetry"];
 
-var pdfjsCoreWorker = require('./core/worker.js');
-
-if (typeof PDFJSDev === 'undefined' ||
-    !PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
-  require('./core/network.js');
-}
-
-exports.WorkerMessageHandler = pdfjsCoreWorker.WorkerMessageHandler;
+this.PdfJsTelemetry = {
+  onViewerIsUsed() {
+  },
+  onFallback() {
+  },
+  onDocumentSize(size) {
+  },
+  onDocumentVersion(versionId) {
+  },
+  onDocumentGenerator(generatorId) {
+  },
+  onEmbed(isObject) {
+  },
+  onFontType(fontTypeId) {
+  },
+  onForm(isAcroform) {
+  },
+  onPrint() {
+  },
+  onStreamType(streamTypeId) {
+  },
+  onTimeToView(ms) {
+  }
+};

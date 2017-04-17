@@ -13,31 +13,16 @@
  * limitations under the License.
  */
 
-'use strict';
-
-(function (root, factory) {
-  if (typeof define === 'function' && define.amd) {
-    define('pdfjs-web/pdf_page_view', ['exports',
-      'pdfjs-web/ui_utils', 'pdfjs-web/pdf_rendering_queue',
-      'pdfjs-web/dom_events', 'pdfjs-web/pdfjs'], factory);
-  } else if (typeof exports !== 'undefined') {
-    factory(exports, require('./ui_utils.js'),
-      require('./pdf_rendering_queue.js'), require('./dom_events.js'),
-      require('./pdfjs.js'));
-  } else {
-    factory((root.pdfjsWebPDFPageView = {}), root.pdfjsWebUIUtils,
-      root.pdfjsWebPDFRenderingQueue, root.pdfjsWebDOMEvents,
-      root.pdfjsWebPDFJS);
-  }
-}(this, function (exports, uiUtils, pdfRenderingQueue, domEvents, pdfjsLib) {
-
-var CSS_UNITS = uiUtils.CSS_UNITS;
-var DEFAULT_SCALE = uiUtils.DEFAULT_SCALE;
-var getOutputScale = uiUtils.getOutputScale;
-var approximateFraction = uiUtils.approximateFraction;
-var roundToDivide = uiUtils.roundToDivide;
-var RendererType = uiUtils.RendererType;
-var RenderingStates = pdfRenderingQueue.RenderingStates;
+import {
+  approximateFraction, CSS_UNITS, DEFAULT_SCALE, getOutputScale, RendererType,
+  roundToDivide
+} from './ui_utils';
+import {
+  createPromiseCapability, CustomStyle, PDFJS, RenderingCancelledException,
+  SVGGraphics
+} from './pdfjs';
+import { getGlobalEventBus } from './dom_events';
+import { RenderingStates } from './pdf_rendering_queue';
 
 var TEXT_LAYER_RENDER_DELAY = 200; // ms
 
@@ -90,7 +75,7 @@ var PDFPageView = (function PDFPageViewClosure() {
     this.enhanceTextSelection = enhanceTextSelection;
     this.renderInteractiveForms = renderInteractiveForms;
 
-    this.eventBus = options.eventBus || domEvents.getGlobalEventBus();
+    this.eventBus = options.eventBus || getGlobalEventBus();
     this.renderingQueue = renderingQueue;
     this.textLayerFactory = textLayerFactory;
     this.annotationLayerFactory = annotationLayerFactory;
@@ -234,17 +219,17 @@ var PDFPageView = (function PDFPageViewClosure() {
       }
 
       var isScalingRestricted = false;
-      if (this.canvas && pdfjsLib.PDFJS.maxCanvasPixels > 0) {
+      if (this.canvas && PDFJS.maxCanvasPixels > 0) {
         var outputScale = this.outputScale;
         if (((Math.floor(this.viewport.width) * outputScale.sx) | 0) *
             ((Math.floor(this.viewport.height) * outputScale.sy) | 0) >
-            pdfjsLib.PDFJS.maxCanvasPixels) {
+            PDFJS.maxCanvasPixels) {
           isScalingRestricted = true;
         }
       }
 
       if (this.canvas) {
-        if (pdfjsLib.PDFJS.useOnlyCssZoom ||
+        if (PDFJS.useOnlyCssZoom ||
             (this.hasRestrictedScaling && isScalingRestricted)) {
           this.cssTransform(this.canvas, true);
 
@@ -290,8 +275,6 @@ var PDFPageView = (function PDFPageViewClosure() {
     },
 
     cssTransform: function PDFPageView_transform(target, redrawAnnotations) {
-      var CustomStyle = pdfjsLib.CustomStyle;
-
       // Scale target (canvas or svg), its wrapper, and page container.
       var width = this.viewport.width;
       var height = this.viewport.height;
@@ -443,7 +426,7 @@ var PDFPageView = (function PDFPageViewClosure() {
 
         if (((typeof PDFJSDev === 'undefined' ||
               !PDFJSDev.test('PDFJS_NEXT')) && error === 'cancelled') ||
-            error instanceof pdfjsLib.RenderingCancelledException) {
+            error instanceof RenderingCancelledException) {
           self.error = null;
           return Promise.resolve(undefined);
         }
@@ -511,14 +494,10 @@ var PDFPageView = (function PDFPageViewClosure() {
     },
 
     paintOnCanvas: function (canvasWrapper) {
-      var resolveRenderPromise, rejectRenderPromise;
-      var promise = new Promise(function (resolve, reject) {
-        resolveRenderPromise = resolve;
-        rejectRenderPromise = reject;
-      });
+      var renderCapability = createPromiseCapability();
 
       var result = {
-        promise: promise,
+        promise: renderCapability.promise,
         onRenderContinue: function (cont) {
           cont();
         },
@@ -553,7 +532,7 @@ var PDFPageView = (function PDFPageViewClosure() {
       var outputScale = getOutputScale(ctx);
       this.outputScale = outputScale;
 
-      if (pdfjsLib.PDFJS.useOnlyCssZoom) {
+      if (PDFJS.useOnlyCssZoom) {
         var actualSizeViewport = viewport.clone({scale: CSS_UNITS});
         // Use a scale that will make the canvas be the original intended size
         // of the page.
@@ -562,10 +541,9 @@ var PDFPageView = (function PDFPageViewClosure() {
         outputScale.scaled = true;
       }
 
-      if (pdfjsLib.PDFJS.maxCanvasPixels > 0) {
+      if (PDFJS.maxCanvasPixels > 0) {
         var pixelsInViewport = viewport.width * viewport.height;
-        var maxScale =
-          Math.sqrt(pdfjsLib.PDFJS.maxCanvasPixels / pixelsInViewport);
+        var maxScale = Math.sqrt(PDFJS.maxCanvasPixels / pixelsInViewport);
         if (outputScale.sx > maxScale || outputScale.sy > maxScale) {
           outputScale.sx = maxScale;
           outputScale.sy = maxScale;
@@ -608,11 +586,11 @@ var PDFPageView = (function PDFPageViewClosure() {
       renderTask.promise.then(
         function pdfPageRenderCallback() {
           showCanvas();
-          resolveRenderPromise(undefined);
+          renderCapability.resolve(undefined);
         },
         function pdfPageRenderError(error) {
           showCanvas();
-          rejectRenderPromise(error);
+          renderCapability.reject(error);
         }
       );
 
@@ -635,8 +613,8 @@ var PDFPageView = (function PDFPageViewClosure() {
       var ensureNotCancelled = function () {
         if (cancelled) {
           if ((typeof PDFJSDev !== 'undefined' &&
-               PDFJSDev.test('PDFJS_NEXT')) || pdfjsLib.PDFJS.pdfjsNext) {
-            throw new pdfjsLib.RenderingCancelledException(
+               PDFJSDev.test('PDFJS_NEXT')) || PDFJS.pdfjsNext) {
+            throw new RenderingCancelledException(
               'Rendering cancelled, page ' + self.id, 'svg');
           } else {
             throw 'cancelled'; // eslint-disable-line no-throw-literal
@@ -646,7 +624,6 @@ var PDFPageView = (function PDFPageViewClosure() {
 
       var self = this;
       var pdfPage = this.pdfPage;
-      var SVGGraphics = pdfjsLib.SVGGraphics;
       var actualSizeViewport = this.viewport.clone({scale: CSS_UNITS});
       var promise = pdfPage.getOperatorList().then(function (opList) {
         ensureNotCancelled();
@@ -691,5 +668,6 @@ var PDFPageView = (function PDFPageViewClosure() {
   return PDFPageView;
 })();
 
-exports.PDFPageView = PDFPageView;
-}));
+export {
+  PDFPageView,
+};
