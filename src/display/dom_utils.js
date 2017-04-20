@@ -13,26 +13,10 @@
  * limitations under the License.
  */
 
-'use strict';
-
-(function (root, factory) {
-  if (typeof define === 'function' && define.amd) {
-    define('pdfjs/display/dom_utils', ['exports', 'pdfjs/shared/util'],
-      factory);
-  } else if (typeof exports !== 'undefined') {
-    factory(exports, require('../shared/util.js'));
-  } else {
-    factory((root.pdfjsDisplayDOMUtils = {}), root.pdfjsSharedUtil);
-  }
-}(this, function (exports, sharedUtil) {
-
-var assert = sharedUtil.assert;
-var removeNullCharacters = sharedUtil.removeNullCharacters;
-var warn = sharedUtil.warn;
-var deprecated = sharedUtil.deprecated;
-var createValidAbsoluteUrl = sharedUtil.createValidAbsoluteUrl;
-var stringToBytes = sharedUtil.stringToBytes;
-var CMapCompressionType = sharedUtil.CMapCompressionType;
+import {
+  assert, CMapCompressionType, createValidAbsoluteUrl, deprecated, globalScope,
+  removeNullCharacters, stringToBytes, warn
+} from '../shared/util';
 
 var DEFAULT_LINK_REL = 'noopener noreferrer nofollow';
 
@@ -189,22 +173,6 @@ var RenderingCancelledException = (function RenderingCancelledException() {
   return RenderingCancelledException;
 })();
 
-var hasCanvasTypedArrays;
-if (typeof PDFJSDev === 'undefined' ||
-    !PDFJSDev.test('FIREFOX || MOZCENTRAL || CHROME')) {
-  hasCanvasTypedArrays = function hasCanvasTypedArrays() {
-    var canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 1;
-    var ctx = canvas.getContext('2d');
-    var imageData = ctx.createImageData(1, 1);
-    return (typeof imageData.data.buffer !== 'undefined');
-  };
-} else {
-  hasCanvasTypedArrays = function () {
-    return true;
-  };
-}
-
 var LinkTarget = {
   NONE: 0, // Default value.
   SELF: 1,
@@ -266,7 +234,7 @@ function getFilenameFromUrl(url) {
 function getDefaultSetting(id) {
   // The list of the settings and their default is maintained for backward
   // compatibility and shall not be extended or modified. See also global.js.
-  var globalSettings = sharedUtil.globalScope.PDFJS;
+  var globalSettings = globalScope.PDFJS;
   switch (id) {
     case 'pdfBug':
       return globalSettings ? globalSettings.pdfBug : false;
@@ -347,16 +315,16 @@ function isValidUrl(url, allowRelative) {
   return createValidAbsoluteUrl(url, baseUrl) !== null;
 }
 
-exports.CustomStyle = CustomStyle;
-exports.addLinkAttributes = addLinkAttributes;
-exports.isExternalLinkTargetSet = isExternalLinkTargetSet;
-exports.isValidUrl = isValidUrl;
-exports.getFilenameFromUrl = getFilenameFromUrl;
-exports.LinkTarget = LinkTarget;
-exports.RenderingCancelledException = RenderingCancelledException;
-exports.hasCanvasTypedArrays = hasCanvasTypedArrays;
-exports.getDefaultSetting = getDefaultSetting;
-exports.DEFAULT_LINK_REL = DEFAULT_LINK_REL;
-exports.DOMCanvasFactory = DOMCanvasFactory;
-exports.DOMCMapReaderFactory = DOMCMapReaderFactory;
-}));
+export {
+  CustomStyle,
+  RenderingCancelledException,
+  addLinkAttributes,
+  isExternalLinkTargetSet,
+  isValidUrl,
+  getFilenameFromUrl,
+  LinkTarget,
+  getDefaultSetting,
+  DEFAULT_LINK_REL,
+  DOMCanvasFactory,
+  DOMCMapReaderFactory,
+};

@@ -45,6 +45,9 @@ if (typeof PDFJSDev !== 'undefined' && PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
   window.FirefoxCom = require('./firefoxcom.js').FirefoxCom;
   require('./firefox_print_service.js');
 }
+if (typeof PDFJSDev !== 'undefined' && PDFJSDev.test('GENERIC')) {
+  require('./genericcom.js');
+}
 if (typeof PDFJSDev !== 'undefined' && PDFJSDev.test('CHROME')) {
   require('./chromecom.js');
 }
@@ -171,9 +174,11 @@ function getViewerConfiguration() {
 function webViewerLoad() {
   var config = getViewerConfiguration();
   if (typeof PDFJSDev === 'undefined' || !PDFJSDev.test('PRODUCTION')) {
-    Promise.all([SystemJS.import('pdfjs-web/app'),
-                 SystemJS.import('pdfjs-web/pdf_print_service')])
-           .then(function (modules) {
+    Promise.all([
+      SystemJS.import('pdfjs-web/app'),
+      SystemJS.import('pdfjs-web/genericcom'),
+      SystemJS.import('pdfjs-web/pdf_print_service'),
+    ]).then(function (modules) {
       var app = modules[0];
       window.PDFViewerApplication = app.PDFViewerApplication;
       app.PDFViewerApplication.run(config);

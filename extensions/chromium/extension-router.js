@@ -28,11 +28,7 @@ limitations under the License.
     'file',
     'chrome-extension',
     'blob',
-    'data',
-    // Chromium OS
-    'filesystem',
-    // Chromium OS, shorthand for filesystem:<origin>/external/
-    'drive'
+    'data'
   ];
 
   /**

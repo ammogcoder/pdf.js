@@ -1,4 +1,4 @@
-/* Copyright 2012 Mozilla Foundation
+/* Copyright 2013 Mozilla Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,13 +13,31 @@
  * limitations under the License.
  */
 
-'use strict';
+"use strict";
 
-var url = location.search.match(/[&?]file=([^&]+)/i);
-if (url) {
-  url = decodeURIComponent(url[1]);
-  document.body.textContent = url;
-  // Set cursor to end of the content-editable section.
-  window.getSelection().selectAllChildren(document.body);
-  window.getSelection().collapseToEnd();
-}
+this.EXPORTED_SYMBOLS = ["PdfJsTelemetry"];
+
+this.PdfJsTelemetry = {
+  onViewerIsUsed() {
+  },
+  onFallback() {
+  },
+  onDocumentSize(size) {
+  },
+  onDocumentVersion(versionId) {
+  },
+  onDocumentGenerator(generatorId) {
+  },
+  onEmbed(isObject) {
+  },
+  onFontType(fontTypeId) {
+  },
+  onForm(isAcroform) {
+  },
+  onPrint() {
+  },
+  onStreamType(streamTypeId) {
+  },
+  onTimeToView(ms) {
+  }
+};
