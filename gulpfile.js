@@ -917,6 +917,8 @@ gulp.task('chromium-pre', ['buildnumber', 'locale'], function () {
 });
 
 gulp.task('chromium', ['chromium-pre'], function (done) {
+  // Brave-only: Create a tmp directory for copying local PDF files to
+  mkdirp(BUILD_DIR + '/chromium/tmp/')
   // Bundle the files to a Chrome extension file .crx if path to key is set
   if (!process.env['PDFJS_CHROME_KEY']) {
     done();
