@@ -161,8 +161,7 @@ PDFJS.workerPort = (PDFJS.workerPort === undefined ? null : PDFJS.workerPort);
  * Enabled (false) by default.
  * @var {boolean}
  */
-PDFJS.disableRange = (PDFJS.disableRange === undefined ?
-                      false : PDFJS.disableRange);
+PDFJS.disableRange = true;
 
 /**
  * Disable streaming of PDF file data. By default PDF.js attempts to load PDF
