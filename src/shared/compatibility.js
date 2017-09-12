@@ -15,27 +15,17 @@
 /* eslint-disable no-extend-native */
 /* globals VBArray, PDFJS, global */
 
-'use strict';
-
-(function (root, factory) {
-  if (typeof define === 'function' && define.amd) {
-    define('pdfjs/shared/compatibility', ['exports'], factory);
-  } else if (typeof exports !== 'undefined') {
-    factory(exports);
-  } else {
-    factory((root.pdfjsSharedCompatibility = {}));
-  }
-}(this, function (exports) {
-
-// Skip compatibility checks for the extensions and if we already run
+// Skip compatibility checks for the extensions and if we already ran
 // this module.
 if ((typeof PDFJSDev === 'undefined' ||
      !PDFJSDev.test('FIREFOX || MOZCENTRAL || CHROME')) &&
     (typeof PDFJS === 'undefined' || !PDFJS.compatibilityChecked)) {
 
-var globalScope = (typeof window !== 'undefined') ? window :
-                  (typeof global !== 'undefined') ? global :
-                  (typeof self !== 'undefined') ? self : this;
+var globalScope =
+  (typeof window !== 'undefined' && window.Math === Math) ? window :
+  (typeof global !== 'undefined' && global.Math === Math) ? global :
+  (typeof self !== 'undefined' && self.Math === Math) ? self :
+  (typeof this !== 'undefined' && this.Math === Math) ? this : {};
 
 var userAgent = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
 var isAndroid = /Android/.test(userAgent);
@@ -63,6 +53,12 @@ PDFJS.compatibilityChecked = true;
 // Checking if the typed arrays are supported
 // Support: iOS<6.0 (subarray), IE<10, Android<4.0
 (function checkTypedArrayCompatibility() {
+  if (typeof Uint8ClampedArray === 'undefined') {
+    // Support: IE<11
+    globalScope.Uint8ClampedArray =
+      require('core-js/fn/typed/uint8-clamped-array');
+  }
+
   if (typeof Uint8Array !== 'undefined') {
     // Support: iOS<6.0
     if (typeof Uint8Array.prototype.subarray === 'undefined') {
@@ -105,18 +101,18 @@ PDFJS.compatibilityChecked = true;
   var uint32ArrayViewSetters = 0;
   function createUint32ArrayProp(index) {
     return {
-      get: function () {
+      get() {
         var buffer = this.buffer, offset = index << 2;
         return (buffer[offset] | (buffer[offset + 1] << 8) |
           (buffer[offset + 2] << 16) | (buffer[offset + 3] << 24)) >>> 0;
       },
-      set: function (value) {
+      set(value) {
         var buffer = this.buffer, offset = index << 2;
         buffer[offset] = value & 255;
         buffer[offset + 1] = (value >> 8) & 255;
         buffer[offset + 2] = (value >> 16) & 255;
         buffer[offset + 3] = (value >>> 24) & 255;
-      }
+      },
     };
   }
 
@@ -190,18 +186,18 @@ PDFJS.compatibilityChecked = true;
   }
   // Trying to fake CanvasPixelArray as Uint8ClampedArray.
   Object.defineProperty(cpaProto, 'buffer', {
-    get: function () {
+    get() {
       return this;
     },
     enumerable: false,
-    configurable: true
+    configurable: true,
   });
   Object.defineProperty(cpaProto, 'byteLength', {
-    get: function () {
+    get() {
       return this.length;
     },
     enumerable: false,
-    configurable: true
+    configurable: true,
   });
 })();
 
@@ -222,13 +218,13 @@ PDFJS.compatibilityChecked = true;
       if (hasDOM) {
         // some browsers (e.g. safari) cannot use defineProperty() on DOM
         // objects and thus the native version is not sufficient
-        Object.defineProperty(new Image(), 'id', { value: 'test' });
+        Object.defineProperty(new Image(), 'id', { value: 'test', });
       }
       // ... another test for android gb browser for non-DOM objects
       var Test = function Test() {};
-      Test.prototype = { get id() { } };
+      Test.prototype = { get id() { }, };
       Object.defineProperty(new Test(), 'id',
-        { value: '', configurable: true, enumerable: true, writable: false });
+        { value: '', configurable: true, enumerable: true, writable: false, });
     } catch (e) {
       definePropertyPossible = false;
     }
@@ -270,7 +266,7 @@ PDFJS.compatibilityChecked = true;
     // IE10 might have response, but not overrideMimeType
     // Support: IE10
     Object.defineProperty(xhrPrototype, 'overrideMimeType', {
-      value: function xmlHttpRequestOverrideMimeType(mimeType) {}
+      value: function xmlHttpRequestOverrideMimeType(mimeType) {},
     });
   }
   if ('responseType' in xhr) {
@@ -289,7 +285,7 @@ PDFJS.compatibilityChecked = true;
           this.overrideMimeType('text/plain; charset=x-user-defined');
         }
       }
-    }
+    },
   });
 
   // Support: IE9
@@ -300,7 +296,7 @@ PDFJS.compatibilityChecked = true;
           return new Uint8Array(new VBArray(this.responseBody).toArray());
         }
         return this.responseText;
-      }
+      },
     });
     return;
   }
@@ -317,7 +313,7 @@ PDFJS.compatibilityChecked = true;
         result[i] = text.charCodeAt(i) & 0xFF;
       }
       return result.buffer;
-    }
+    },
   });
 })();
 
@@ -411,7 +407,7 @@ PDFJS.compatibilityChecked = true;
   }
 
   Object.defineProperty(HTMLElement.prototype, 'dataset', {
-    get: function() {
+    get() {
       if (this._dataset) {
         return this._dataset;
       }
@@ -432,11 +428,11 @@ PDFJS.compatibilityChecked = true;
       Object.defineProperty(this, '_dataset', {
         value: dataset,
         writable: false,
-        enumerable: false
+        enumerable: false,
       });
       return dataset;
     },
-    enumerable: true
+    enumerable: true,
   });
 })();
 
@@ -470,22 +466,22 @@ PDFJS.compatibilityChecked = true;
   }
 
   var classListPrototype = {
-    add: function(name) {
+    add(name) {
       changeList(this.element, name, true, false);
     },
-    contains: function(name) {
+    contains(name) {
       return changeList(this.element, name, false, false);
     },
-    remove: function(name) {
+    remove(name) {
       changeList(this.element, name, false, true);
     },
-    toggle: function(name) {
+    toggle(name) {
       changeList(this.element, name, true, true);
-    }
+    },
   };
 
   Object.defineProperty(HTMLElement.prototype, 'classList', {
-    get: function() {
+    get() {
       if (this._classList) {
         return this._classList;
       }
@@ -494,17 +490,17 @@ PDFJS.compatibilityChecked = true;
         element: {
           value: this,
           writable: false,
-          enumerable: true
-        }
+          enumerable: true,
+        },
       });
       Object.defineProperty(this, '_classList', {
         value: classList,
         writable: false,
-        enumerable: false
+        enumerable: false,
       });
       return classList;
     },
-    enumerable: true
+    enumerable: true,
   });
 })();
 
@@ -523,7 +519,7 @@ PDFJS.compatibilityChecked = true;
       globalScope.postMessage({
         targetName: 'main',
         action: 'console_log',
-        data: args
+        data: args,
       });
     },
 
@@ -532,7 +528,7 @@ PDFJS.compatibilityChecked = true;
       globalScope.postMessage({
         targetName: 'main',
         action: 'console_error',
-        data: args
+        data: args,
       });
     },
 
@@ -546,7 +542,7 @@ PDFJS.compatibilityChecked = true;
         throw new Error('Unknown timer name ' + name);
       }
       this.log('Timer:', name, Date.now() - time);
-    }
+    },
   };
 
   globalScope.console = workerConsole;
@@ -562,9 +558,9 @@ PDFJS.compatibilityChecked = true;
   }
   if (!('console' in window)) {
     window.console = {
-      log: function() {},
-      error: function() {},
-      warn: function() {}
+      log() {},
+      error() {},
+      warn() {},
     };
     return;
   }
@@ -772,12 +768,12 @@ PDFJS.compatibilityChecked = true;
     return;
   }
   Object.defineProperty(document, 'currentScript', {
-    get: function () {
+    get() {
       var scripts = document.getElementsByTagName('script');
       return scripts[scripts.length - 1];
     },
     enumerable: true,
-    configurable: true
+    configurable: true,
   });
 })();
 
@@ -794,14 +790,14 @@ PDFJS.compatibilityChecked = true;
     var inputProto = el.constructor.prototype;
     var typeProperty = Object.getOwnPropertyDescriptor(inputProto, 'type');
     Object.defineProperty(inputProto, 'type', {
-      get: function () {
+      get() {
         return typeProperty.get.call(this);
       },
-      set: function (value) {
+      set(value) {
         typeProperty.set.call(this, value === 'number' ? 'text' : value);
       },
       enumerable: true,
-      configurable: true
+      configurable: true,
     });
   }
 })();
@@ -819,15 +815,15 @@ PDFJS.compatibilityChecked = true;
   var readyStateProto = Object.getOwnPropertyDescriptor(documentProto,
                                                         'readyState');
   Object.defineProperty(documentProto, 'readyState', {
-    get: function () {
+    get() {
       var value = readyStateProto.get.call(this);
       return value === 'interactive' ? 'loading' : value;
     },
-    set: function (value) {
+    set(value) {
       readyStateProto.set.call(this, value);
     },
     enumerable: true,
-    configurable: true
+    configurable: true,
   });
 })();
 
@@ -844,6 +840,29 @@ PDFJS.compatibilityChecked = true;
     if (this.parentNode) {
       this.parentNode.removeChild(this);
     }
+  };
+})();
+
+// Provides support for Number.isNaN in legacy browsers.
+// Support: IE.
+(function checkNumberIsNaN() {
+  if (Number.isNaN) {
+    return;
+  }
+  Number.isNaN = function(value) {
+    return typeof value === 'number' && isNaN(value);
+  };
+})();
+
+// Provides support for Number.isInteger in legacy browsers.
+// Support: IE.
+(function checkNumberIsInteger() {
+  if (Number.isInteger) {
+    return;
+  }
+  Number.isInteger = function(value) {
+    return typeof value === 'number' && isFinite(value) &&
+           Math.floor(value) === value;
   };
 })();
 
@@ -979,8 +998,8 @@ PDFJS.compatibilityChecked = true;
 
     addUnhandledRejection: function addUnhandledRejection(promise) {
       this.unhandledRejections.push({
-        promise: promise,
-        time: Date.now()
+        promise,
+        time: Date.now(),
       });
       this.scheduleRejectionCheck();
     },
@@ -1000,7 +1019,7 @@ PDFJS.compatibilityChecked = true;
         return;
       }
       this.pendingRejectionCheck = true;
-      setTimeout(function rejectionCheck() {
+      setTimeout(() => {
         this.pendingRejectionCheck = false;
         var now = Date.now();
         for (var i = 0; i < this.unhandledRejections.length; i++) {
@@ -1023,8 +1042,8 @@ PDFJS.compatibilityChecked = true;
         if (this.unhandledRejections.length) {
           this.scheduleRejectionCheck();
         }
-      }.bind(this), REJECTION_TIMEOUT);
-    }
+      }, REJECTION_TIMEOUT);
+    },
   };
 
   var Promise = function Promise(resolver) {
@@ -1160,9 +1179,9 @@ PDFJS.compatibilityChecked = true;
       });
       this._handlers.push({
         thisPromise: this,
-        onResolve: onResolve,
-        onReject: onReject,
-        nextPromise: nextPromise
+        onResolve,
+        onReject,
+        nextPromise,
       });
       HandlerManager.scheduleHandlers(this);
       return nextPromise;
@@ -1170,7 +1189,7 @@ PDFJS.compatibilityChecked = true;
 
     catch: function Promise_catch(onReject) {
       return this.then(undefined, onReject);
-    }
+    },
   };
 
   globalScope.Promise = Promise;
@@ -1186,22 +1205,26 @@ PDFJS.compatibilityChecked = true;
     this.id = '$weakmap' + (id++);
   }
   WeakMap.prototype = {
-    has: function(obj) {
+    has(obj) {
+      if ((typeof obj !== 'object' && typeof obj !== 'function') ||
+          obj === null) {
+        return false;
+      }
       return !!Object.getOwnPropertyDescriptor(obj, this.id);
     },
-    get: function(obj, defaultValue) {
-      return this.has(obj) ? obj[this.id] : defaultValue;
+    get(obj) {
+      return this.has(obj) ? obj[this.id] : undefined;
     },
-    set: function(obj, value) {
+    set(obj, value) {
       Object.defineProperty(obj, this.id, {
-        value: value,
+        value,
         enumerable: false,
-        configurable: true
+        configurable: true,
       });
     },
-    delete: function(obj) {
+    delete(obj) {
       delete obj[this.id];
-    }
+    },
   };
 
   globalScope.WeakMap = WeakMap;
@@ -1703,7 +1726,7 @@ PDFJS.compatibilityChecked = true;
   }
 
   JURL.prototype = {
-    toString: function() {
+    toString() {
       return this.href;
     },
     get href() {
@@ -1720,92 +1743,94 @@ PDFJS.compatibilityChecked = true;
           (this._isRelative ? '//' + authority + this.host : '') +
           this.pathname + this._query + this._fragment;
     },
-    set href(href) {
+    // The named parameter should be different from the setter's function name.
+    // Otherwise Safari 5 will throw an error (see issue 8541)
+    set href(value) {
       clear.call(this);
-      parse.call(this, href);
+      parse.call(this, value);
     },
 
     get protocol() {
       return this._scheme + ':';
     },
-    set protocol(protocol) {
+    set protocol(value) {
       if (this._isInvalid) {
         return;
       }
-      parse.call(this, protocol + ':', 'scheme start');
+      parse.call(this, value + ':', 'scheme start');
     },
 
     get host() {
       return this._isInvalid ? '' : this._port ?
           this._host + ':' + this._port : this._host;
     },
-    set host(host) {
+    set host(value) {
       if (this._isInvalid || !this._isRelative) {
         return;
       }
-      parse.call(this, host, 'host');
+      parse.call(this, value, 'host');
     },
 
     get hostname() {
       return this._host;
     },
-    set hostname(hostname) {
+    set hostname(value) {
       if (this._isInvalid || !this._isRelative) {
         return;
       }
-      parse.call(this, hostname, 'hostname');
+      parse.call(this, value, 'hostname');
     },
 
     get port() {
       return this._port;
     },
-    set port(port) {
+    set port(value) {
       if (this._isInvalid || !this._isRelative) {
         return;
       }
-      parse.call(this, port, 'port');
+      parse.call(this, value, 'port');
     },
 
     get pathname() {
       return this._isInvalid ? '' : this._isRelative ?
           '/' + this._path.join('/') : this._schemeData;
     },
-    set pathname(pathname) {
+    set pathname(value) {
       if (this._isInvalid || !this._isRelative) {
         return;
       }
       this._path = [];
-      parse.call(this, pathname, 'relative path start');
+      parse.call(this, value, 'relative path start');
     },
 
     get search() {
       return this._isInvalid || !this._query || this._query === '?' ?
           '' : this._query;
     },
-    set search(search) {
+    set search(value) {
       if (this._isInvalid || !this._isRelative) {
         return;
       }
       this._query = '?';
-      if (search[0] === '?') {
-        search = search.slice(1);
+      if (value[0] === '?') {
+        value = value.slice(1);
       }
-      parse.call(this, search, 'query');
+      parse.call(this, value, 'query');
     },
 
     get hash() {
       return this._isInvalid || !this._fragment || this._fragment === '#' ?
           '' : this._fragment;
     },
-    set hash(hash) {
+    set hash(value) {
       if (this._isInvalid) {
         return;
       }
       this._fragment = '#';
-      if (hash[0] === '#') {
-        hash = hash.slice(1);
+      if (value[0] === '#') {
+        value = value.slice(1);
       }
-      parse.call(this, hash, 'fragment');
+      parse.call(this, value, 'fragment');
     },
 
     get origin() {
@@ -1824,13 +1849,21 @@ PDFJS.compatibilityChecked = true;
         case 'javascript':
         case 'mailto':
           return 'null';
+        case 'blob':
+          // Special case of blob: -- returns valid origin of _schemeData.
+          try {
+            return new JURL(this._schemeData).origin || 'null';
+          } catch (_) {
+            // Invalid _schemeData origin -- ignoring errors.
+          }
+          return 'null';
       }
       host = this.host;
       if (!host) {
         return '';
       }
       return this._scheme + '://' + host;
-    }
+    },
   };
 
   // Copy over the static methods
@@ -1850,5 +1883,3 @@ PDFJS.compatibilityChecked = true;
 })();
 
 }
-
-}));

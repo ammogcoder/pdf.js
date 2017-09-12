@@ -12,64 +12,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-'use strict';
 
-(function (root, factory) {
-  if (typeof define === 'function' && define.amd) {
-    define('pdfjs-test/unit/annotation_spec', ['exports',
-      'pdfjs/core/primitives', 'pdfjs/core/annotation', 'pdfjs/core/stream',
-      'pdfjs/core/parser', 'pdfjs/shared/util'], factory);
-  } else if (typeof exports !== 'undefined') {
-    factory(exports, require('../../src/core/primitives.js'),
-      require('../../src/core/annotation.js'),
-      require('../../src/core/stream.js'), require('../../src/core/parser.js'),
-      require('../../src/shared/util.js'));
-  } else {
-    factory((root.pdfjsTestUnitAnnotationSpec = {}),
-      root.pdfjsCorePrimitives, root.pdfjsCoreAnnotation, root.pdfjsCoreStream,
-      root.pdfjsCoreParser, root.pdfjsSharedUtil);
-  }
-}(this, function (exports, corePrimitives, coreAnnotation, coreStream,
-                  coreParser, sharedUtil) {
-
-var Annotation = coreAnnotation.Annotation;
-var AnnotationBorderStyle = coreAnnotation.AnnotationBorderStyle;
-var AnnotationFactory = coreAnnotation.AnnotationFactory;
-var Lexer = coreParser.Lexer;
-var Parser = coreParser.Parser;
-var isRef = corePrimitives.isRef;
-var Dict = corePrimitives.Dict;
-var Name = corePrimitives.Name;
-var Ref = corePrimitives.Ref;
-var StringStream = coreStream.StringStream;
-var AnnotationType = sharedUtil.AnnotationType;
-var AnnotationFlag = sharedUtil.AnnotationFlag;
-var AnnotationBorderStyleType = sharedUtil.AnnotationBorderStyleType;
-var AnnotationFieldFlag = sharedUtil.AnnotationFieldFlag;
-var stringToBytes = sharedUtil.stringToBytes;
-var stringToUTF8String = sharedUtil.stringToUTF8String;
+import {
+  Annotation, AnnotationBorderStyle, AnnotationFactory
+} from '../../src/core/annotation';
+import {
+  AnnotationBorderStyleType, AnnotationFieldFlag, AnnotationFlag,
+  AnnotationType, stringToBytes, stringToUTF8String
+} from '../../src/shared/util';
+import { Dict, Name, Ref } from '../../src/core/primitives';
+import { Lexer, Parser } from '../../src/core/parser';
+import { StringStream } from '../../src/core/stream';
+import { XRefMock } from './test_utils';
 
 describe('annotation', function() {
-  function XRefMock(array) {
-    this.map = Object.create(null);
-    for (var elem in array) {
-      var obj = array[elem];
-      var ref = obj.ref, data = obj.data;
-      this.map[ref.toString()] = data;
-    }
-  }
-  XRefMock.prototype = {
-    fetch: function (ref) {
-      return this.map[ref.toString()];
-    },
-    fetchIfRef: function (obj) {
-      if (!isRef(obj)) {
-        return obj;
-      }
-      return this.fetch(obj);
-    },
-  };
-
   function PDFManagerMock(params) {
     this.docBaseUrl = params.docBaseUrl || null;
   }
@@ -81,7 +37,7 @@ describe('annotation', function() {
       obj: params.startObjId || 0,
     };
     return {
-      createObjId: function () {
+      createObjId() {
         return uniquePrefix + (++idCounters.obj);
       },
     };
@@ -178,7 +134,7 @@ describe('annotation', function() {
     });
 
     it('should set and get flags', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setFlags(13);
 
       expect(annotation.hasFlag(AnnotationFlag.INVISIBLE)).toEqual(true);
@@ -188,63 +144,63 @@ describe('annotation', function() {
     });
 
     it('should be viewable and not printable by default', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
 
       expect(annotation.viewable).toEqual(true);
       expect(annotation.printable).toEqual(false);
     });
 
     it('should set and get a valid rectangle', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setRectangle([117, 694, 164.298, 720]);
 
       expect(annotation.rectangle).toEqual([117, 694, 164.298, 720]);
     });
 
     it('should not set and get an invalid rectangle', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setRectangle([117, 694, 164.298]);
 
       expect(annotation.rectangle).toEqual([0, 0, 0, 0]);
     });
 
     it('should reject a color if it is not an array', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor('red');
 
       expect(annotation.color).toEqual(new Uint8Array([0, 0, 0]));
     });
 
     it('should set and get a transparent color', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor([]);
 
       expect(annotation.color).toEqual(null);
     });
 
     it('should set and get a grayscale color', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor([0.4]);
 
       expect(annotation.color).toEqual(new Uint8Array([102, 102, 102]));
     });
 
     it('should set and get an RGB color', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor([0, 0, 1]);
 
       expect(annotation.color).toEqual(new Uint8Array([0, 0, 255]));
     });
 
     it('should set and get a CMYK color', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor([0.1, 0.92, 0.84, 0.02]);
 
       expect(annotation.color).toEqual(new Uint8Array([233, 59, 47]));
     });
 
     it('should not set and get an invalid color', function() {
-      var annotation = new Annotation({ dict: dict, ref: ref });
+      var annotation = new Annotation({ dict, ref, });
       annotation.setColor([0.4, 0.6]);
 
       expect(annotation.color).toEqual(new Uint8Array([0, 0, 0]));
@@ -528,9 +484,8 @@ describe('annotation', function() {
       var data = annotation.data;
       expect(data.annotationType).toEqual(AnnotationType.LINK);
 
-      expect(data.url).toEqual('http://www.example.com/test.pdf#nameddest=15');
-      expect(data.unsafeUrl).toEqual(
-        'http://www.example.com/test.pdf#nameddest=15');
+      expect(data.url).toEqual('http://www.example.com/test.pdf#15');
+      expect(data.unsafeUrl).toEqual('http://www.example.com/test.pdf#15');
       expect(data.dest).toBeUndefined();
       expect(data.newWindow).toBeFalsy();
     });
@@ -731,7 +686,7 @@ describe('annotation', function() {
 
       expect(data.url).toBeUndefined();
       expect(data.unsafeUrl).toBeUndefined();
-      expect(data.dest).toEqual([{ num: 17, gen: 0, }, { name: 'XYZ' },
+      expect(data.dest).toEqual([{ num: 17, gen: 0, }, { name: 'XYZ', },
                                  0, 841.89, null]);
     });
   });
@@ -1111,11 +1066,11 @@ describe('annotation', function() {
       var expected = [
         {
           exportValue: 'foo_export',
-          displayValue: 'Foo'
+          displayValue: 'Foo',
         },
         {
           exportValue: 'bar_export',
-          displayValue: 'Bar'
+          displayValue: 'Bar',
         }
       ];
 
@@ -1144,11 +1099,11 @@ describe('annotation', function() {
       var expected = [
         {
           exportValue: 'Foo',
-          displayValue: 'Foo'
+          displayValue: 'Foo',
         },
         {
           exportValue: 'Bar',
-          displayValue: 'Bar'
+          displayValue: 'Bar',
         }
       ];
 
@@ -1174,8 +1129,8 @@ describe('annotation', function() {
         ['Value2', 'Description2'],
       ];
       var expected = [
-        { exportValue: 'Value1', displayValue: 'Description1' },
-        { exportValue: 'Value2', displayValue: 'Description2' },
+        { exportValue: 'Value1', displayValue: 'Description1', },
+        { exportValue: 'Value2', displayValue: 'Description2', },
       ];
 
       var parentDict = new Dict();
@@ -1393,4 +1348,3 @@ describe('annotation', function() {
     });
   });
 });
-}));
